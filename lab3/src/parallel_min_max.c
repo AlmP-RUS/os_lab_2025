@@ -42,16 +42,28 @@ int main(int argc, char **argv) {
             seed = atoi(optarg);
             // your code here
             // error handling
+            if (seed <= 0) {
+              printf("seed is a positive number\n");
+              return 1;
+            }
             break;
           case 1:
             array_size = atoi(optarg);
             // your code here
             // error handling
+            if (array_size <= 0) {
+              printf("array_size is a positive number\n");
+              return 1;
+            }
             break;
           case 2:
             pnum = atoi(optarg);
             // your code here
             // error handling
+            if (pnum <= 0) {
+              printf("pnum is a positive number grater than zero\n");
+              return 1;
+            }
             break;
           case 3:
             with_files = true;
@@ -91,20 +103,37 @@ int main(int argc, char **argv) {
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
 
+  int fd[2];
+  if (pipe(fd) != 0) {
+    printf("Failed to create pipe.\n");
+    return 1;
+  }
+
   for (int i = 0; i < pnum; i++) {
     pid_t child_pid = fork();
     if (child_pid >= 0) {
       // successful fork
       active_child_processes += 1;
       if (child_pid == 0) {
-        // child process
-
-        // parallel somehow
-
+        //printf("%d %d\n", array_size / pnum * (active_child_processes - 1), array_size / pnum * (active_child_processes));
+        struct MinMax min_max = GetMinMax(array, array_size / pnum * (active_child_processes - 1), array_size / pnum * (active_child_processes));
         if (with_files) {
           // use files here
+          FILE* file = fopen("sync", "ab");
+          if (file == NULL)
+          {
+            printf("Unable to sync via files\n");
+            return 1;
+          }
+          else
+          {
+            printf("file opend\n");
+          }
+          fwrite(&min_max, sizeof(struct MinMax), 1, file);
+          fclose(file);
         } else {
-          // use pipe here
+          write(fd[1], &min_max, sizeof(struct MinMax));
+          //printf("C - %d %d\n", min_max.min, min_max.max);
         }
         return 0;
       }
@@ -115,29 +144,43 @@ int main(int argc, char **argv) {
     }
   }
 
-  while (active_child_processes > 0) {
-    // your code here
-
-    active_child_processes -= 1;
-  }
-
   struct MinMax min_max;
   min_max.min = INT_MAX;
   min_max.max = INT_MIN;
 
-  for (int i = 0; i < pnum; i++) {
-    int min = INT_MAX;
-    int max = INT_MIN;
+  while (wait(NULL) > 0);
 
+    struct MinMax* min_max_part = malloc(pnum * sizeof(struct MinMax));
+    if (min_max_part == NULL)
+    {
+      printf("Failed to syncronize forks\n");
+      return 1;
+    }
     if (with_files) {
       // read from files
+      FILE* file = fopen("sync", "rb");
+      if (file == NULL)
+      {
+        printf("Failed to sync via files\n");
+        return 1;
+      }
+      fread(min_max_part, sizeof(struct MinMax), pnum, file);
+      fclose(file);
+      if (remove("sync") != 0)
+      {
+        printf("Unable to delete a file\n");
+        return 1;
+      }
     } else {
       // read from pipes
+      read(fd[0], min_max_part, sizeof(struct MinMax) * pnum);
     }
-
-    if (min < min_max.min) min_max.min = min;
-    if (max > min_max.max) min_max.max = max;
-  }
+    for (int i = 0; i < pnum; i++)
+    {
+      //printf("P - %d %d\n", min_max_part[i].min, min_max_part[0].max);
+      min_max.min = (min_max.min > min_max_part[i].min) ? min_max_part[i].min : min_max.min;
+      min_max.max = (min_max.max < min_max_part[i].max) ? min_max_part[i].max : min_max.max;
+    }
 
   struct timeval finish_time;
   gettimeofday(&finish_time, NULL);
