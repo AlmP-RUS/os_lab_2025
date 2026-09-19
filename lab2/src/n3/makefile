@@ -6,7 +6,7 @@ shared/revert_string.so: ../revert_string/revert_string.c
 	gcc -shared ../revert_string/revert_string.c -o shared/revert_string.so
 
 shared/a.out: ../revert_string/main.c shared/revert_string.so
-	gcc -fPIC ../revert_string/main.c shared/revert_string.so -o shared/a.out
+	gcc ../revert_string/main.c shared/revert_string.so -o shared/a.out
 
 
 
