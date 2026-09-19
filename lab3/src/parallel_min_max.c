@@ -150,37 +150,37 @@ int main(int argc, char **argv) {
 
   while (wait(NULL) > 0);
 
-    struct MinMax* min_max_part = malloc(pnum * sizeof(struct MinMax));
-    if (min_max_part == NULL)
+  struct MinMax* min_max_part = malloc(pnum * sizeof(struct MinMax));
+  if (min_max_part == NULL)
+  {
+    printf("Failed to syncronize forks\n");
+    return 1;
+  }
+  if (with_files) {
+    // read from files
+    FILE* file = fopen("sync", "rb");
+    if (file == NULL)
     {
-      printf("Failed to syncronize forks\n");
+      printf("Failed to sync via files\n");
       return 1;
     }
-    if (with_files) {
-      // read from files
-      FILE* file = fopen("sync", "rb");
-      if (file == NULL)
-      {
-        printf("Failed to sync via files\n");
-        return 1;
-      }
-      fread(min_max_part, sizeof(struct MinMax), pnum, file);
-      fclose(file);
-      if (remove("sync") != 0)
-      {
-        printf("Unable to delete a file\n");
-        return 1;
-      }
-    } else {
-      // read from pipes
-      read(fd[0], min_max_part, sizeof(struct MinMax) * pnum);
-    }
-    for (int i = 0; i < pnum; i++)
+    fread(min_max_part, sizeof(struct MinMax), pnum, file);
+    fclose(file);
+    if (remove("sync") != 0)
     {
-      //printf("P - %d %d\n", min_max_part[i].min, min_max_part[0].max);
-      min_max.min = (min_max.min > min_max_part[i].min) ? min_max_part[i].min : min_max.min;
-      min_max.max = (min_max.max < min_max_part[i].max) ? min_max_part[i].max : min_max.max;
+      printf("Unable to delete a file\n");
+      return 1;
     }
+  } else {
+    // read from pipes
+    read(fd[0], min_max_part, sizeof(struct MinMax) * pnum);
+  }
+  for (int i = 0; i < pnum; i++)
+  {
+    //printf("P - %d %d\n", min_max_part[i].min, min_max_part[0].max);
+    min_max.min = (min_max.min > min_max_part[i].min) ? min_max_part[i].min : min_max.min;
+    min_max.max = (min_max.max < min_max_part[i].max) ? min_max_part[i].max : min_max.max;
+  }
 
   struct timeval finish_time;
   gettimeofday(&finish_time, NULL);
