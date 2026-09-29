@@ -15,9 +15,9 @@ extern int etext, edata, end; /* Global variables for process
 
 char *cptr = "This message is output by the function showit()\n"; /* Static */
 char buffer1[25];
-int showit(); /* Function prototype */
+int showit(char*); /* Function prototype */
 
-main() {
+int main() {
   int i = 0; /* Automatic variable */
 
   /* Printing addressing information */
@@ -34,6 +34,7 @@ main() {
   write(1, buffer1, strlen(buffer1) + 1); /* System call */
   showit(cptr);
 
+  return 0;
 } /* end of main function */
 
 /* A function follows */
