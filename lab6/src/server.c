@@ -35,7 +35,11 @@ uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
 uint64_t Factorial(const struct FactorialArgs *args) {
   uint64_t ans = 1;
 
-  // TODO: your code here
+  //printf("My begin: %d, My end: %d.\n", args->begin, args->end);
+  for (int i = args->begin; i < args->end; i++)
+  {
+    ans = MultModulo(ans, i, args->mod);
+  }
 
   return ans;
 }
@@ -50,8 +54,6 @@ int main(int argc, char **argv) {
   int port = -1;
 
   while (true) {
-    int current_optind = optind ? optind : 1;
-
     static struct option options[] = {{"port", required_argument, 0, 0},
                                       {"tnum", required_argument, 0, 0},
                                       {0, 0, 0, 0}};
@@ -67,11 +69,19 @@ int main(int argc, char **argv) {
       switch (option_index) {
       case 0:
         port = atoi(optarg);
-        // TODO: your code here
+        if (port < 0 || port > 65536)
+        {
+          fprintf(stderr, "Impossible value of port\n");
+          return 1;
+        }
         break;
       case 1:
         tnum = atoi(optarg);
-        // TODO: your code here
+        if (tnum <= 0)
+        {
+          fprintf(stderr, "Count of threads can't be <= 0.\n");
+          return 1;
+        }
         break;
       default:
         printf("Index %d is out of options\n", option_index);
@@ -131,6 +141,10 @@ int main(int argc, char **argv) {
 
     while (true) {
       unsigned int buffer_size = sizeof(uint64_t) * 3;
+      // from_client:
+      // 00..07 - begin (inclusive)
+      // 08..15 - end   (inclusive)
+      // 16..23 - mod
       char from_client[buffer_size];
       int read = recv(client_fd, from_client, buffer_size, 0);
 
@@ -154,14 +168,13 @@ int main(int argc, char **argv) {
       memcpy(&end, from_client + sizeof(uint64_t), sizeof(uint64_t));
       memcpy(&mod, from_client + 2 * sizeof(uint64_t), sizeof(uint64_t));
 
-      fprintf(stdout, "Receive: %llu %llu %llu\n", begin, end, mod);
+      fprintf(stdout, "Receive: %lu %lu %lu\n", begin, end, mod);
 
       struct FactorialArgs args[tnum];
       for (uint32_t i = 0; i < tnum; i++) {
-        // TODO: parallel somehow
-        args[i].begin = 1;
-        args[i].end = 1;
-        args[i].mod = mod;
+        args[i].begin = begin + (end - begin + 1) * (i)     / tnum;
+        args[i].end   = begin + (end - begin + 1) * (i + 1) / tnum;
+        args[i].mod   = mod;
 
         if (pthread_create(&threads[i], NULL, ThreadFactorial,
                            (void *)&args[i])) {
@@ -177,7 +190,7 @@ int main(int argc, char **argv) {
         total = MultModulo(total, result, mod);
       }
 
-      printf("Total: %llu\n", total);
+      printf("Total: %lu\n", total);
 
       char buffer[sizeof(total)];
       memcpy(buffer, &total, sizeof(total));
