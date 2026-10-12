@@ -15,13 +15,13 @@
 #include <sys/types.h>
 
 #include <pthread.h>
+#include "superlibrary.h"
 
 struct Server {
   char ip[255];
   int port;
 };
 
-uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod);
 bool ConvertStringToUI64(const char *str, uint64_t *val);
 
 void handle_console_options(const int argc, char* const argv[], uint64_t* k, uint64_t* mod, char servers[]);
@@ -114,19 +114,6 @@ void handle_console_options(const int argc, char* const argv[], uint64_t* k, uin
             argv[0]);
     exit(1);
   }
-}
-
-uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
-  uint64_t result = 0;
-  a = a % mod;
-  while (b > 0) {
-    if (b % 2 == 1)
-      result = (result + a) % mod;
-    a = (a * 2) % mod;
-    b /= 2;
-  }
-
-  return result % mod;
 }
 
 bool ConvertStringToUI64(const char *str, uint64_t *val) {
