@@ -1,0 +1,9 @@
+
+
+./tcpserver --port 10050 --blocksize 100
+
+./tcpclient --blocksize 100 127.0.0.1 10050
+
+./udpserver --port 20001 --blocksize 1024
+
+./udpclient --port 20001 --blocksize 1024 127.0.0.1
