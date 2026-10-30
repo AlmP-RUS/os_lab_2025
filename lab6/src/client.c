@@ -230,22 +230,22 @@ void create_sockets(struct Server const to[], int *sck, uint64_t servers_num)
 
 struct data_for_thread
 {
-  uint64_t k;
+  uint64_t begin;
+  uint64_t end;
   uint64_t mod;
   int sck;
   int i;
+  uint64_t return_value;
 };
 
 void *threads_foo(void *data)
 {
-  uint64_t k   = ((struct data_for_thread*) data) -> k;
-  uint64_t mod = ((struct data_for_thread*) data) -> mod;
-  int      sck = ((struct data_for_thread*) data) -> sck;
+  uint64_t begin  = ((struct data_for_thread*) data) -> begin;
+  uint64_t end    = ((struct data_for_thread*) data) -> end;
+  uint64_t mod    = ((struct data_for_thread*) data) -> mod;
+  int      sck    = ((struct data_for_thread*) data) -> sck;
 
-  printf("I'm the thread no. %d\n", ((struct data_for_thread*) data) -> i);
-
-  uint64_t begin = 1;
-  uint64_t end = k;
+  //printf("I'm the thread no. %d\n", ((struct data_for_thread*) data) -> i);
 
   char task[sizeof(uint64_t) * 3];
   memcpy(task, &begin, sizeof(uint64_t));
@@ -267,7 +267,9 @@ void *threads_foo(void *data)
   // unite results
   uint64_t answer = 0;
   memcpy(&answer, response, sizeof(uint64_t));
-  printf("answer: %lu\n", answer);
+  printf("server answer: %lu\n", answer);
+
+  ((struct data_for_thread*) data) -> return_value = answer;
 
   close(sck);
 
@@ -280,15 +282,20 @@ void parallel_servers_communication(int* const sck, uint64_t servers_num, uint64
   struct data_for_thread* data = alloca(servers_num * sizeof(struct data_for_thread));
   for (int i = 0; i < servers_num; i++)
   {
-    data[i].k = k;
+    data[i].begin = 1 + (k - 1 + 1) * (i)     / servers_num;
+    data[i].end   = 0 + (k - 1 + 1) * (i + 1) / servers_num;
     data[i].mod = mod;
     data[i].sck = sck[i];
     data[i].i = i;
+    data[i].return_value = 1;
     pthread_create(&threads[i], NULL, threads_foo, (void*)&data[i]);
   }
 
+  uint64_t return_value = 1;
   for (int i = 0; i < servers_num; i++)
   {
     pthread_join(threads[i], NULL);
+    return_value = MultModulo(return_value, data[i].return_value, mod);
   }
+  printf("Ultimate answer: %lu", return_value);
 }
